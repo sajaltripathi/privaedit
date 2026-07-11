@@ -23,6 +23,11 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 
+// ML Kit OCR Imports
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+
 enum class AppScreen {
     DASHBOARD,
     IMAGE_EDITOR,
@@ -32,7 +37,6 @@ enum class AppScreen {
 }
 
 class DocumentViewModel(private val repository: DocumentRepository) : ViewModel() {
-
     // --- Navigation & Core State ---
     var currentScreen by mutableStateOf(AppScreen.DASHBOARD)
     var securityPassword by mutableStateOf<String?>(null) // User master passphrase
@@ -48,7 +52,6 @@ class DocumentViewModel(private val repository: DocumentRepository) : ViewModel(
     // --- DB Data Flows ---
     val categories: StateFlow<List<Category>> = repository.allCategories
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
     val tags: StateFlow<List<Tag>> = repository.allTags
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -87,15 +90,13 @@ class DocumentViewModel(private val repository: DocumentRepository) : ViewModel(
             var filtered = decryptedList.filter { doc ->
                 // Search Query Filter
                 val matchesQuery = query.isEmpty() || 
-                    doc.title.contains(query, ignoreCase = true) || 
-                    doc.content.contains(query, ignoreCase = true)
+                     doc.title.contains(query, ignoreCase = true) || 
+                     doc.content.contains(query, ignoreCase = true)
                 
                 // File Type Filter
                 val matchesType = type == "ALL" || doc.fileType == type
-
                 // Category Filter
                 val matchesCat = catId == null || doc.categoryId == catId
-
                 // Tag Filter
                 val matchesTag = tag == null || doc.tags.split(",").map { it.trim() }.contains(tag)
 
@@ -147,7 +148,6 @@ class DocumentViewModel(private val repository: DocumentRepository) : ViewModel(
     var pdfPageSizeSelection by mutableStateOf("A4") // "A4", "Letter"
 
     // --- Actions ---
-
     fun createNewTextDocument() {
         selectedDocumentId = null
         textTitle = "New Secure Document"
@@ -243,6 +243,7 @@ class DocumentViewModel(private val repository: DocumentRepository) : ViewModel(
             val title = textTitle.ifEmpty { "Untitled text document" }
             val bytes = textContent.toByteArray(Charsets.UTF_8)
             val docId = selectedDocumentId
+
             if (docId == null) {
                 repository.saveDocument(
                     title = title,
@@ -313,8 +314,6 @@ class DocumentViewModel(private val repository: DocumentRepository) : ViewModel(
         cm.setSaturation(imageSaturation)
 
         // Contrast & Brightness
-        // formula: scale * color + translate
-        // scale is contrast, translate is brightness
         val scale = imageContrast
         val translate = imageBrightness
         val contrastMatrix = floatArrayOf(
@@ -348,8 +347,6 @@ class DocumentViewModel(private val repository: DocumentRepository) : ViewModel(
                 strokeWidth = 20f
                 isAntiAlias = true
             }
-            // Scale paths to rotated size if necessary
-            // For a simple, super robust redact: draw directly
             redactionPaths.forEach { path ->
                 maskCanvas.drawPath(path, maskPaint)
             }
@@ -406,6 +403,32 @@ class DocumentViewModel(private val repository: DocumentRepository) : ViewModel(
         }
     }
 
+    fun extractTextFromImage() {
+        val bitmap = imageSourceBitmap ?: return
+        
+        // 1. Prepare the image for ML Kit
+        val image = InputImage.fromBitmap(bitmap, 0)
+        
+        // 2. Initialize the offline Latin text recognizer
+        val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+        
+        // 3. Process the pixels
+        recognizer.process(image)
+            .addOnSuccessListener { visionText ->
+                // Success! Send the extracted text to the Text Editor
+                textTitle = "Extracted OCR Text"
+                textContent = visionText.text
+                currentScreen = AppScreen.TEXT_EDITOR
+            }
+            .addOnFailureListener { e ->
+                // Handle corrupted images or processing failures gracefully
+                e.printStackTrace()
+                textTitle = "Extraction Failed"
+                textContent = "The OCR engine could not read this image."
+                currentScreen = AppScreen.TEXT_EDITOR
+            }
+    }
+
     // --- PDF Operations ---
     fun startNewPdf() {
         pdfPages.clear()
@@ -445,6 +468,7 @@ class DocumentViewModel(private val repository: DocumentRepository) : ViewModel(
                 val bitmap = pdfPages[i]
                 val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, i + 1).create()
                 val page = pdfDocument.startPage(pageInfo)
+
                 val canvas = page.canvas
 
                 // Scale bitmap to fit canvas size with maintaining ratio or stretch
@@ -452,6 +476,7 @@ class DocumentViewModel(private val repository: DocumentRepository) : ViewModel(
                 val scaleX = pageWidth.toFloat() / bitmap.width
                 val scaleY = pageHeight.toFloat() / bitmap.height
                 val scale = Math.min(scaleX, scaleY)
+
                 val dx = (pageWidth - bitmap.width * scale) / 2f
                 val dy = (pageHeight - bitmap.height * scale) / 2f
                 
