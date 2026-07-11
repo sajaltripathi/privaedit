@@ -60,6 +60,8 @@ secrets {
 googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN }
 
 dependencies {
+// Google ML Kit for Offline Text Recognition (OCR)
+  implementation("com.google.mlkit:text-recognition:16.0.1")
   implementation(platform(libs.androidx.compose.bom))
   implementation(platform(libs.firebase.bom))
   implementation(libs.androidx.activity.compose)
