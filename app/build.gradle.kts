@@ -60,8 +60,10 @@ secrets {
 googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN }
 
 dependencies {
-// Google ML Kit for Offline Text Recognition (OCR)
+// Google ML Kit for Offline OCR
   implementation("com.google.mlkit:text-recognition:16.0.1")
+    // PdfBox-Android for Offline PDF Manipulation
+  implementation("com.tomroush:pdfbox-android:2.0.27.0")
   implementation(platform(libs.androidx.compose.bom))
   implementation(platform(libs.firebase.bom))
   implementation(libs.androidx.activity.compose)
