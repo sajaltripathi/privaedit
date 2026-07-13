@@ -1,35 +1,35 @@
-name: Cloud Build APK
+name: Android CI/CD
 
 on:
   push:
-    branches: [ "master" ]
-  workflow_dispatch:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        # Notice we removed the 'cache: gradle' line so it doesn't load broken data
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Make Gradle executable
-      run: chmod +x gradlew
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
 
-    - name: Force Clean and Build APK
-      run: |
-        ./gradlew --stop
-        rm -rf .gradle
-        ./gradlew clean assembleDebug --no-daemon --no-build-cache --no-configuration-cache
+      - name: Create local.properties
+        run: |
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          echo "secrets.properties is not needed for build" > secrets.properties
 
-    - name: Upload APK Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: PrivaEdit-debug-apk
-        path: app/build/outputs/apk/debug/app-debug.apk
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build Signed APK
+        run: ./gradlew assembleRelease
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/my-upload-key.jks
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
