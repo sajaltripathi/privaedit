@@ -28,7 +28,7 @@ jobs:
 
       # Changed to assembleDebug so it uses the automatic testing key
       - name: Build Debug APK
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleDebug --no-daemon -Djava.awt.headless=true
 
       # Added this step to upload the APK so you can download it!
       - name: Upload APK Artifact
