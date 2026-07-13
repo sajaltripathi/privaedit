@@ -13,7 +13,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # This must be the FIRST step to avoid 'file not found' errors
       - name: Create local.properties
         run: |
           echo "sdk.dir=$ANDROID_HOME" > local.properties
@@ -27,9 +26,13 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build Signed APK
-        run: ./gradlew assembleRelease --no-daemon
-        env:
-          KEYSTORE_PATH: ${{ github.workspace }}/my-upload-key.jks
-          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      # Changed to assembleDebug so it uses the automatic testing key
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --no-daemon
+
+      # Added this step to upload the APK so you can download it!
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PrivaEdit-App
+          path: app/build/outputs/apk/debug/app-debug.apk
