@@ -26,9 +26,11 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # Changed to assembleDebug so it uses the automatic testing key
+      # Force kill any stuck daemons, ignore cache, and build headless
       - name: Build Debug APK
-        run: ./gradlew assembleDebug --no-daemon -Djava.awt.headless=true
+        run: |
+          ./gradlew --stop
+          ./gradlew assembleDebug --no-daemon --no-build-cache -Djava.awt.headless=true
 
       # Added this step to upload the APK so you can download it!
       - name: Upload APK Artifact
