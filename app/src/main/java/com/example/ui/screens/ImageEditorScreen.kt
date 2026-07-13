@@ -1,10 +1,6 @@
 package com.example.ui.screens
 
 import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
-import android.graphics.Path
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -20,13 +16,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Path // <--- This is the correct Compose Path
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.AppScreen
@@ -405,7 +401,7 @@ fun ImageEditorScreen(
                     }
                 }
 
-                Divider(color = ComposeColor(0xFFCAC4D0).copy(alpha = 0.5f))
+                HorizontalDivider(color = ComposeColor(0xFFCAC4D0).copy(alpha = 0.5f))
 
                 // 5. Target Format Selector
                 Text("Format Conversion", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = ComposeColor(0xFF1D1B20))
