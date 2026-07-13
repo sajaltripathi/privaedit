@@ -1,9 +1,13 @@
+import com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.devtools.ksp)
     alias(libs.plugins.roborazzi)
     alias(libs.plugins.secrets)
+    alias(libs.plugins.google.services)
 }
 
 android {
@@ -19,6 +23,10 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    googleServices {
+        missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN
+    }
+
     signingConfigs {
         create("release") {
             val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
@@ -32,7 +40,6 @@ android {
     buildTypes {
         release {
             isCrunchPngs = false
-            // Enabled minification for security and removal of unused code
             isMinifyEnabled = true 
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.getByName("release")
@@ -55,13 +62,9 @@ android {
 }
 
 dependencies {
-    // PDF Handling
     implementation("com.tomroush:pdfbox-android:2.0.27.0")
-    
-    // ML Kit (Ensure the model is bundled or handled fully locally)
     implementation("com.google.mlkit:text-recognition:16.0.1")
     
-    // UI & Core
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material.icons.core)
@@ -74,17 +77,12 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
-    
-    // Persistence (Local Only)
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.room.runtime)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.core)
-    
-    // Image Handling
     implementation(libs.coil.compose)
     
-    // Testing
     testImplementation(libs.androidx.compose.ui.test.junit4)
     testImplementation(libs.androidx.core)
     testImplementation(libs.androidx.junit)
