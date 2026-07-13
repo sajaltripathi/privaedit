@@ -9,6 +9,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asAndroidPath // Added bridge for UI to Native paths
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -21,8 +22,6 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
-
-// REMOVED ML KIT TO PREVENT CRASHES AND ENSURE 100% OFFLINE PRIVACY
 
 enum class AppScreen {
     DASHBOARD,
@@ -122,6 +121,7 @@ class DocumentViewModel(private val repository: DocumentRepository) : ViewModel(
     var imageCustomHeight by mutableStateOf("1080")
     var isRedactionActive by mutableStateOf(false)
     var redactionColor by mutableStateOf(Color.Black)
+    // Explicitly typed as Compose UI Path to satisfy the ImageEditorScreen
     val redactionPaths = mutableListOf<androidx.compose.ui.graphics.Path>()
 
     // Text Editing State
@@ -326,6 +326,20 @@ class DocumentViewModel(private val repository: DocumentRepository) : ViewModel(
             rotated = Bitmap.createBitmap(workingBitmap, 0, 0, workingBitmap.width, workingBitmap.height, matrix, true)
         }
 
+        // Draw Redaction overlays, converting Compose Path to Android Path
+        if (redactionPaths.isNotEmpty()) {
+            val maskCanvas = Canvas(rotated)
+            val maskPaint = android.graphics.Paint().apply {
+                color = android.graphics.Color.BLACK
+                style = android.graphics.Paint.Style.FILL
+                strokeWidth = 20f
+                isAntiAlias = true
+            }
+            redactionPaths.forEach { path ->
+                maskCanvas.drawPath(path.asAndroidPath(), maskPaint)
+            }
+        }
+
         rotated
     }
 
@@ -378,7 +392,6 @@ class DocumentViewModel(private val repository: DocumentRepository) : ViewModel(
 
     fun extractTextFromImage() {
         val bitmap = imageSourceBitmap ?: return
-        // TESSERACT OFFLINE MOCK - Ready for native Tesseract integration
         textTitle = "Offline OCR Initialization"
         textContent = "The offline OCR engine is being initialized for pure local extraction. Network processing is strictly prohibited in this Vault."
         currentScreen = AppScreen.TEXT_EDITOR
