@@ -16,7 +16,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Path // <--- This is the correct Compose Path
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.input.pointer.pointerInput
@@ -126,15 +125,16 @@ fun ImageEditorScreen(
                         if (viewModel.isRedactionActive) {
                             detectDragGestures(
                                 onDragStart = { offset ->
-                                    val newPath = Path().apply { moveTo(offset.x, offset.y) }
+                                    // FORCE COMPOSE PATH EXPLICITLY
+                                    val newPath = androidx.compose.ui.graphics.Path().apply { moveTo(offset.x, offset.y) }
                                     viewModel.redactionPaths.add(newPath)
                                 },
                                 onDrag = { change, dragAmount ->
                                     change.consume()
                                     val currentPath = viewModel.redactionPaths.lastOrNull()
                                     currentPath?.lineTo(change.position.x, change.position.y)
-                                    // Trigger recomposition/redraw
-                                    viewModel.redactionPaths[viewModel.redactionPaths.size - 1] = currentPath ?: Path()
+                                    // FORCE COMPOSE PATH EXPLICITLY
+                                    viewModel.redactionPaths[viewModel.redactionPaths.size - 1] = currentPath ?: androidx.compose.ui.graphics.Path()
                                 }
                             )
                         }
@@ -153,7 +153,6 @@ fun ImageEditorScreen(
                     CircularProgressIndicator(color = ComposeColor(0xFF6750A4))
                 }
 
-                // Redaction mode indicator
                 if (viewModel.isRedactionActive) {
                     Box(
                         modifier = Modifier
@@ -181,7 +180,6 @@ fun ImageEditorScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Save Title
                 OutlinedTextField(
                     value = saveName,
                     onValueChange = { saveName = it },
@@ -197,7 +195,6 @@ fun ImageEditorScreen(
                     modifier = Modifier.fillMaxWidth().testTag("image_name_input")
                 )
 
-                // 1. Redaction Masking & Unmasking Trigger
                 Card(
                     colors = CardDefaults.cardColors(containerColor = ComposeColor.White),
                     modifier = Modifier
@@ -246,7 +243,6 @@ fun ImageEditorScreen(
                     }
                 }
 
-                // 2. Preset Aspect Ratios & Resizing
                 Text("Preset Dimensions & Resizing", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = ComposeColor(0xFF1D1B20))
                 val sizes = listOf("Free", "A4", "Passport", "WhatsApp", "Custom")
                 var sizeExpanded by remember { mutableStateOf(false) }
@@ -315,10 +311,8 @@ fun ImageEditorScreen(
                     }
                 }
 
-                // 3. Sliders for Tuning
                 Text("Color & Light Enhancers", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = ComposeColor(0xFF1D1B20))
                 
-                // Brightness Slider
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -340,7 +334,6 @@ fun ImageEditorScreen(
                     )
                 }
 
-                // Contrast Slider
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -362,7 +355,6 @@ fun ImageEditorScreen(
                     )
                 }
 
-                // Saturation Slider
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -384,7 +376,6 @@ fun ImageEditorScreen(
                     )
                 }
 
-                // 4. Rotation Actions
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -403,7 +394,6 @@ fun ImageEditorScreen(
 
                 HorizontalDivider(color = ComposeColor(0xFFCAC4D0).copy(alpha = 0.5f))
 
-                // 5. Target Format Selector
                 Text("Format Conversion", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = ComposeColor(0xFF1D1B20))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -432,7 +422,6 @@ fun ImageEditorScreen(
                     }
                 }
 
-                // 6. Quality / Compression Slider
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -459,7 +448,6 @@ fun ImageEditorScreen(
                     )
                 }
 
-                // Export out of sandbox
                 Button(
                     onClick = {
                         coroutineScope.launch {
@@ -479,7 +467,6 @@ fun ImageEditorScreen(
                                     createdAt = 0,
                                     updatedAt = 0
                                 )
-                                // Save mock file temp and trigger export
                                 val outDir = java.io.File(context.getExternalFilesDir(null), "Exports")
                                 if (!outDir.exists()) outDir.mkdirs()
                                 val ext = if (viewModel.imageMimeType.contains("png")) "png" else "jpg"
