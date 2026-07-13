@@ -55,7 +55,7 @@ android {
 
 dependencies {
     // PDF Handling
-    implementation("com.tomroush:pdfbox-android:2.0.27.0")
+    implementation("com.tom-roush:pdfbox-android:2.0.27.0")
     
     // ML Kit
     implementation("com.google.mlkit:text-recognition:16.0.1")
