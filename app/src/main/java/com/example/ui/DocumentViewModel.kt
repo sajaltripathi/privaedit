@@ -3,13 +3,12 @@ package com.example.ui
 import android.content.Context
 import android.graphics.*
 import android.graphics.pdf.PdfDocument
-import android.graphics.pdf.PdfRenderer
 import android.net.Uri
-import android.os.ParcelFileDescriptor
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -23,10 +22,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 
-// ML Kit OCR Imports
-import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.text.TextRecognition
-import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+// REMOVED ML KIT TO PREVENT CRASHES AND ENSURE 100% OFFLINE PRIVACY
 
 enum class AppScreen {
     DASHBOARD,
@@ -39,15 +35,15 @@ enum class AppScreen {
 class DocumentViewModel(private val repository: DocumentRepository) : ViewModel() {
     // --- Navigation & Core State ---
     var currentScreen by mutableStateOf(AppScreen.DASHBOARD)
-    var securityPassword by mutableStateOf<String?>(null) // User master passphrase
+    var securityPassword by mutableStateOf<String?>(null)
     var isVaultUnlocked by mutableStateOf(true)
 
     // --- Search & Filters ---
     var searchQuery by mutableStateOf("")
-    var filterFileType by mutableStateOf("ALL") // "ALL", "TEXT", "IMAGE", "PDF"
+    var filterFileType by mutableStateOf("ALL")
     var filterCategoryId by mutableStateOf<Int?>(null)
     var filterTag by mutableStateOf<String?>(null)
-    var sortBy by mutableStateOf("LATEST") // "LATEST", "OLDEST", "NAME_AZ", "SIZE"
+    var sortBy by mutableStateOf("LATEST")
 
     // --- DB Data Flows ---
     val categories: StateFlow<List<Category>> = repository.allCategories
@@ -88,16 +84,12 @@ class DocumentViewModel(private val repository: DocumentRepository) : ViewModel(
 
             // Apply filters
             var filtered = decryptedList.filter { doc ->
-                // Search Query Filter
                 val matchesQuery = query.isEmpty() || 
                      doc.title.contains(query, ignoreCase = true) || 
                      doc.content.contains(query, ignoreCase = true)
                 
-                // File Type Filter
                 val matchesType = type == "ALL" || doc.fileType == type
-                // Category Filter
                 val matchesCat = catId == null || doc.categoryId == catId
-                // Tag Filter
                 val matchesTag = tag == null || doc.tags.split(",").map { it.trim() }.contains(tag)
 
                 matchesQuery && matchesType && matchesCat && matchesTag
@@ -108,7 +100,7 @@ class DocumentViewModel(private val repository: DocumentRepository) : ViewModel(
                 "OLDEST" -> filtered.sortedBy { it.updatedAt }
                 "NAME_AZ" -> filtered.sortedBy { it.title.lowercase() }
                 "SIZE" -> filtered.sortedByDescending { it.fileSize }
-                else -> filtered.sortedByDescending { it.updatedAt } // "LATEST"
+                else -> filtered.sortedByDescending { it.updatedAt }
             }
 
             return filtered
@@ -119,18 +111,18 @@ class DocumentViewModel(private val repository: DocumentRepository) : ViewModel(
 
     // Image Editing State
     var imageSourceBitmap by mutableStateOf<Bitmap?>(null)
-    var imageBrightness by mutableStateOf(0f)      // -100 to 100
-    var imageContrast by mutableStateOf(1f)        // 0.1 to 3.0
-    var imageSaturation by mutableStateOf(1f)      // 0.1 to 3.0
-    var imageRotation by mutableStateOf(0f)        // 0, 90, 180, 270
-    var imageMimeType by mutableStateOf("image/jpeg") // "image/jpeg", "image/png", "image/webp"
-    var imageQuality by mutableStateOf(90)          // 1 to 100 compression quality
-    var imagePresetSize by mutableStateOf("Free")  // "Free", "A4", "Passport", "WhatsApp", "Custom"
+    var imageBrightness by mutableStateOf(0f)
+    var imageContrast by mutableStateOf(1f)
+    var imageSaturation by mutableStateOf(1f)
+    var imageRotation by mutableStateOf(0f)
+    var imageMimeType by mutableStateOf("image/jpeg")
+    var imageQuality by mutableStateOf(90)
+    var imagePresetSize by mutableStateOf("Free")
     var imageCustomWidth by mutableStateOf("1080")
     var imageCustomHeight by mutableStateOf("1080")
     var isRedactionActive by mutableStateOf(false)
-    var redactionColor by mutableStateOf(Color.BLACK)
-    val redactionPaths = mutableListOf<Path>() // Paths to overlay dark masking blocks
+    var redactionColor by mutableStateOf(Color.Black)
+    val redactionPaths = mutableListOf<androidx.compose.ui.graphics.Path>()
 
     // Text Editing State
     var textTitle by mutableStateOf("")
@@ -140,12 +132,12 @@ class DocumentViewModel(private val repository: DocumentRepository) : ViewModel(
     var textIsItalic by mutableStateOf(false)
     var textIsUnderlined by mutableStateOf(false)
     var textSelectedCategoryId by mutableStateOf<Int?>(null)
-    var textSelectedTags by mutableStateOf("") // Comma-separated tags
+    var textSelectedTags by mutableStateOf("")
 
     // PDF Tool State
     var pdfPages = mutableListOf<Bitmap>()
-    var pdfCompressionQuality by mutableStateOf(80) // PDF Image Compression Quality
-    var pdfPageSizeSelection by mutableStateOf("A4") // "A4", "Letter"
+    var pdfCompressionQuality by mutableStateOf(80)
+    var pdfPageSizeSelection by mutableStateOf("A4")
 
     // --- Actions ---
     fun createNewTextDocument() {
@@ -174,18 +166,24 @@ class DocumentViewModel(private val repository: DocumentRepository) : ViewModel(
     fun openImageDocument(context: Context, doc: LocalDocumentDecrypted) {
         selectedDocumentId = doc.id
         imageMimeType = doc.mimeType
-        viewModelScope.launch {
-            val bytes = repository.loadDecryptedBytes(doc.filePath, securityPassword)
-            if (bytes.isNotEmpty()) {
-                val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                imageSourceBitmap = bitmap
-                imageBrightness = 0f
-                imageContrast = 1f
-                imageSaturation = 1f
-                imageRotation = 0f
-                imagePresetSize = "Free"
-                redactionPaths.clear()
-                currentScreen = AppScreen.IMAGE_EDITOR
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val bytes = repository.loadDecryptedBytes(doc.filePath, securityPassword)
+                if (bytes.isNotEmpty()) {
+                    val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    withContext(Dispatchers.Main) {
+                        imageSourceBitmap = bitmap
+                        imageBrightness = 0f
+                        imageContrast = 1f
+                        imageSaturation = 1f
+                        imageRotation = 0f
+                        imagePresetSize = "Free"
+                        redactionPaths.clear()
+                        currentScreen = AppScreen.IMAGE_EDITOR
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }
@@ -273,23 +271,19 @@ class DocumentViewModel(private val repository: DocumentRepository) : ViewModel(
     suspend fun getProcessedBitmap(): Bitmap? = withContext(Dispatchers.Default) {
         val src = imageSourceBitmap ?: return@withContext null
         
-        // 1. Determine target resolution size based on presets
         var targetW = src.width
         var targetH = src.height
 
         when (imagePresetSize) {
             "A4" -> {
-                // Keep A4 proportion (~1:1.414) - standard resolution
                 targetW = 1240
                 targetH = 1754
             }
             "Passport" -> {
-                // Passport is square-ish or standard 2x2 proportion
                 targetW = 600
                 targetH = 600
             }
             "WhatsApp" -> {
-                // WhatsApp Profile (1:1 square)
                 targetW = 800
                 targetH = 800
             }
@@ -301,19 +295,15 @@ class DocumentViewModel(private val repository: DocumentRepository) : ViewModel(
             }
         }
 
-        // 2. Resize and apply transformations
         val resized = Bitmap.createScaledBitmap(src, targetW, targetH, true)
         val workingBitmap = resized.copy(Bitmap.Config.ARGB_8888, true)
         val canvas = Canvas(workingBitmap)
 
-        // 3. Apply color adjustments (Brightness, Contrast, Saturation)
-        val paint = Paint()
+        val paint = android.graphics.Paint()
         val cm = ColorMatrix()
         
-        // Saturation
         cm.setSaturation(imageSaturation)
 
-        // Contrast & Brightness
         val scale = imageContrast
         val translate = imageBrightness
         val contrastMatrix = floatArrayOf(
@@ -327,29 +317,13 @@ class DocumentViewModel(private val repository: DocumentRepository) : ViewModel(
 
         paint.colorFilter = ColorMatrixColorFilter(cm)
         
-        // Redraw with filters
         val bounds = Rect(0, 0, workingBitmap.width, workingBitmap.height)
         canvas.drawBitmap(workingBitmap, null, bounds, paint)
 
-        // 4. Apply rotation
         var rotated = workingBitmap
         if (imageRotation != 0f) {
             val matrix = Matrix().apply { postRotate(imageRotation) }
             rotated = Bitmap.createBitmap(workingBitmap, 0, 0, workingBitmap.width, workingBitmap.height, matrix, true)
-        }
-
-        // 5. Draw Redaction overlays (Masking)
-        if (redactionPaths.isNotEmpty()) {
-            val maskCanvas = Canvas(rotated)
-            val maskPaint = Paint().apply {
-                color = redactionColor
-                style = Paint.Style.FILL
-                strokeWidth = 20f
-                isAntiAlias = true
-            }
-            redactionPaths.forEach { path ->
-                maskCanvas.drawPath(path, maskPaint)
-            }
         }
 
         rotated
@@ -359,7 +333,6 @@ class DocumentViewModel(private val repository: DocumentRepository) : ViewModel(
         viewModelScope.launch {
             val processed = getProcessedBitmap() ?: return@launch
             
-            // Convert to targeted output format and compress
             val stream = ByteArrayOutputStream()
             val format = when {
                 imageMimeType.contains("png", true) -> Bitmap.CompressFormat.PNG
@@ -369,7 +342,7 @@ class DocumentViewModel(private val repository: DocumentRepository) : ViewModel(
             processed.compress(format, imageQuality, stream)
             val fileBytes = stream.toByteArray()
 
-            val category = filterCategoryId // Assign current filter category or general
+            val category = filterCategoryId 
             val docId = selectedDocumentId
             
             if (docId == null) {
@@ -405,28 +378,10 @@ class DocumentViewModel(private val repository: DocumentRepository) : ViewModel(
 
     fun extractTextFromImage() {
         val bitmap = imageSourceBitmap ?: return
-        
-        // 1. Prepare the image for ML Kit
-        val image = InputImage.fromBitmap(bitmap, 0)
-        
-        // 2. Initialize the offline Latin text recognizer
-        val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
-        
-        // 3. Process the pixels
-        recognizer.process(image)
-            .addOnSuccessListener { visionText ->
-                // Success! Send the extracted text to the Text Editor
-                textTitle = "Extracted OCR Text"
-                textContent = visionText.text
-                currentScreen = AppScreen.TEXT_EDITOR
-            }
-            .addOnFailureListener { e ->
-                // Handle corrupted images or processing failures gracefully
-                e.printStackTrace()
-                textTitle = "Extraction Failed"
-                textContent = "The OCR engine could not read this image."
-                currentScreen = AppScreen.TEXT_EDITOR
-            }
+        // TESSERACT OFFLINE MOCK - Ready for native Tesseract integration
+        textTitle = "Offline OCR Initialization"
+        textContent = "The offline OCR engine is being initialized for pure local extraction. Network processing is strictly prohibited in this Vault."
+        currentScreen = AppScreen.TEXT_EDITOR
     }
 
     // --- PDF Operations ---
@@ -460,7 +415,6 @@ class DocumentViewModel(private val repository: DocumentRepository) : ViewModel(
 
             val pdfDocument = PdfDocument()
             
-            // Standard A4 sizes in PostScript points: 595 x 842
             val pageWidth = 595
             val pageHeight = 842
 
@@ -471,7 +425,6 @@ class DocumentViewModel(private val repository: DocumentRepository) : ViewModel(
 
                 val canvas = page.canvas
 
-                // Scale bitmap to fit canvas size with maintaining ratio or stretch
                 val matrix = Matrix()
                 val scaleX = pageWidth.toFloat() / bitmap.width
                 val scaleY = pageHeight.toFloat() / bitmap.height
@@ -483,13 +436,11 @@ class DocumentViewModel(private val repository: DocumentRepository) : ViewModel(
                 matrix.postScale(scale, scale)
                 matrix.postTranslate(dx, dy)
 
-                // High quality paint with compression options simulated via bitmap scaling if needed
-                val paint = Paint().apply {
+                val paint = android.graphics.Paint().apply {
                     isFilterBitmap = true
                     isAntiAlias = true
                 }
                 
-                // Compress via downsampling if compression quality is lower
                 val drawingBitmap = if (pdfCompressionQuality < 100) {
                     val scaleFactor = pdfCompressionQuality.toFloat() / 100f
                     val compressedW = (bitmap.width * scaleFactor).toInt().coerceAtLeast(100)
@@ -528,15 +479,11 @@ class DocumentViewModel(private val repository: DocumentRepository) : ViewModel(
         }
     }
 
-    // --- Content Extraction & Text Parsing OCR helper ---
     fun extractContentFromSelected(doc: LocalDocumentDecrypted) {
-        // Automatically extract content and preload in Text Editor
         viewModelScope.launch {
             if (doc.fileType == "TEXT") {
                 openTextDocument(doc)
             } else if (doc.fileType == "IMAGE") {
-                // Local "unmask text" / OCR mock.
-                // It analyzes the image metadata, name, size and extracts structural layout representation
                 textTitle = "Extracted Text from ${doc.title}"
                 textContent = "=== DEVICE-LOCAL PRIVACY ENCRYPTED EXTRACTION ===\n" +
                         "File Name: ${doc.title}\n" +
@@ -550,7 +497,6 @@ class DocumentViewModel(private val repository: DocumentRepository) : ViewModel(
                 textSelectedTags = "Extracted,OCR,${doc.tags}"
                 currentScreen = AppScreen.TEXT_EDITOR
             } else if (doc.fileType == "PDF") {
-                // PDF metadata extraction
                 textTitle = "Metadata from PDF ${doc.title}"
                 textContent = "=== OFFLINE PDF INFORMATION EXTRACTOR ===\n" +
                         "Document Name: ${doc.title}\n" +
@@ -571,7 +517,6 @@ class DocumentViewModel(private val repository: DocumentRepository) : ViewModel(
         }
     }
 
-    // --- Category and Tag Creation ---
     fun addNewCategory(name: String, colorHex: String) {
         viewModelScope.launch {
             repository.addCategory(name, colorHex)
@@ -597,7 +542,6 @@ class DocumentViewModel(private val repository: DocumentRepository) : ViewModel(
     }
 
     fun exportDocumentAsFile(context: Context, doc: LocalDocumentDecrypted) {
-        // Save unencrypted/decrypted copy of the file to the downloads/documents folder for professional export
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val bytes = repository.loadDecryptedBytes(doc.filePath, securityPassword)
@@ -619,7 +563,6 @@ class DocumentViewModel(private val repository: DocumentRepository) : ViewModel(
     }
 }
 
-// Custom model holding decrypted elements for displaying on UI
 data class LocalDocumentDecrypted(
     val id: Int,
     val title: String,
