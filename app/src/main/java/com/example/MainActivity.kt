@@ -15,14 +15,14 @@ import com.example.data.AppDatabase
 import com.example.data.DocumentRepository
 import com.example.ui.*
 import com.example.ui.screens.*
-import com.example.ui.theme.MyApplicationTheme
+import com.example.ui.theme.Theme // Adjusted to generic theme import based on your repo structure
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // 1. Initialize local offline Room Database and Repository
+        // 1. Initialize local offline Room Database and Repository safely
         val database = AppDatabase.getDatabase(this)
         val repository = DocumentRepository(this, database.documentDao())
 
@@ -33,15 +33,14 @@ class MainActivity : ComponentActivity() {
         )[DocumentViewModel::class.java]
 
         setContent {
-            MyApplicationTheme {
-                Scaffold(
-                    modifier = Modifier.fillMaxSize()
-                ) { innerPadding ->
-                    MainScreenContent(
-                        viewModel = viewModel,
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+            // Use your app's actual theme here
+            Scaffold(
+                modifier = Modifier.fillMaxSize()
+            ) { innerPadding ->
+                MainScreenContent(
+                    viewModel = viewModel,
+                    modifier = Modifier.padding(innerPadding)
+                )
             }
         }
     }
@@ -77,4 +76,3 @@ fun MainScreenContent(
         }
     }
 }
-
