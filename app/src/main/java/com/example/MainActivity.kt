@@ -1,5 +1,4 @@
 package com.example
-
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -15,7 +14,7 @@ import com.example.data.AppDatabase
 import com.example.data.DocumentRepository
 import com.example.ui.*
 import com.example.ui.screens.*
-import com.example.ui.theme.Theme // Adjusted to generic theme import based on your repo structure
+import com.example.ui.theme.MyApplicationTheme // Restored your original theme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,14 +32,15 @@ class MainActivity : ComponentActivity() {
         )[DocumentViewModel::class.java]
 
         setContent {
-            // Use your app's actual theme here
-            Scaffold(
-                modifier = Modifier.fillMaxSize()
-            ) { innerPadding ->
-                MainScreenContent(
-                    viewModel = viewModel,
-                    modifier = Modifier.padding(innerPadding)
-                )
+            MyApplicationTheme { // Restored your original theme call
+                Scaffold(
+                    modifier = Modifier.fillMaxSize()
+                ) { innerPadding ->
+                    MainScreenContent(
+                        viewModel = viewModel,
+                        modifier = Modifier.padding(innerPadding)
+                    )
+                }
             }
         }
     }
@@ -58,21 +58,11 @@ fun MainScreenContent(
         label = "ScreenTransition"
     ) { screen ->
         when (screen) {
-            AppScreen.DASHBOARD -> {
-                DashboardScreen(viewModel = viewModel)
-            }
-            AppScreen.IMAGE_EDITOR -> {
-                ImageEditorScreen(viewModel = viewModel)
-            }
-            AppScreen.TEXT_EDITOR -> {
-                TextEditorScreen(viewModel = viewModel)
-            }
-            AppScreen.PDF_EDITOR -> {
-                PdfEditorScreen(viewModel = viewModel)
-            }
-            AppScreen.SECURITY_SETTINGS -> {
-                SecuritySettingsScreen(viewModel = viewModel)
-            }
+            AppScreen.DASHBOARD -> DashboardScreen(viewModel = viewModel)
+            AppScreen.IMAGE_EDITOR -> ImageEditorScreen(viewModel = viewModel)
+            AppScreen.TEXT_EDITOR -> TextEditorScreen(viewModel = viewModel)
+            AppScreen.PDF_EDITOR -> PdfEditorScreen(viewModel = viewModel)
+            AppScreen.SECURITY_SETTINGS -> SecuritySettingsScreen(viewModel = viewModel)
         }
     }
 }
