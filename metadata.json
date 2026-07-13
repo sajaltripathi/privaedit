@@ -1,0 +1,6 @@
+{
+  "name": "PrivaEdit",
+  "description": "Secure, transparent, and fully offline-first editor and content manager with local encryption, PDF/image processing, and zero third-party tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
